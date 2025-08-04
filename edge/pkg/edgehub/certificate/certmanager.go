@@ -10,6 +10,7 @@ import (
 	"io"
 	nethttp "net/http"
 	"os"
+	"strings"
 	"time"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -108,7 +109,7 @@ func (cm *CertManager) getCurrent() (*tls.Certificate, error) {
 
 // applyCerts realizes the certificate application by token
 func (cm *CertManager) applyCerts() error {
-	cacert, err := GetCACert(cm.caURL)
+	cacert, err := GetCACertWithToken(cm.caURL, strings.Join(strings.Split(cm.token, ".")[1:], "."))
 	if err != nil {
 		return fmt.Errorf("failed to get CA certificate, err: %v", err)
 	}
@@ -233,6 +234,26 @@ func (cm *CertManager) getCA() ([]byte, error) {
 func GetCACert(url string) ([]byte, error) {
 	client := http.NewHTTPClient()
 	req, err := http.BuildRequest(nethttp.MethodGet, url, nil, "", "")
+	if err != nil {
+		return nil, err
+	}
+	res, err := http.SendRequest(req, client)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	caCert, err := io.ReadAll(io.LimitReader(res.Body, constants.MaxRespBodyLength))
+	if err != nil {
+		return nil, err
+	}
+
+	return caCert, nil
+}
+
+// GetCACertWithToken gets the cloudcore CA certificate
+func GetCACertWithToken(url, token string) ([]byte, error) {
+	client := http.NewHTTPClient()
+	req, err := http.BuildRequest(nethttp.MethodGet, url, nil, token, "")
 	if err != nil {
 		return nil, err
 	}

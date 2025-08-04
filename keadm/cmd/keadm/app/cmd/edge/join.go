@@ -19,6 +19,7 @@ package edge
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/kubeedge/kubeedge/common/types"
 	"net"
 	"net/http"
 	"os"
@@ -210,7 +211,15 @@ func isNodeExist(opt *common.JoinOptions) error {
 		},
 	}
 
-	resp, err := client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	bearerToken := "Bearer " + strings.Join(strings.Split(opt.Token, ".")[1:], ".")
+	req.Header.Add(types.HeaderAuthorization, bearerToken)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return errors.Errorf("error making request: %v", err)
 	}
