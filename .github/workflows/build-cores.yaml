@@ -1,0 +1,54 @@
+name: BuildEdgeCoreImage
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  REGISTRY_REPO: ${{ vars.IMAGE_REPO }}
+
+jobs:
+  operator-build:
+    runs-on: ubuntu-latest
+    name: Build Image for Ai Token Handler
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Get version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+
+      - name: Declare some variables
+        shell: bash
+        run: |
+          echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
+          echo "suffix=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
+          # echo "suffix=$(date +'%Y-%m-%d')" >> "$GITHUB_ENV"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push docker images
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./build/edge/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ vars.IMAGE_REPO }}/edgecore:${{ env.branch }}-${{ env.suffix }}
