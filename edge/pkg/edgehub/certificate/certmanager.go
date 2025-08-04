@@ -113,7 +113,6 @@ func (cm *CertManager) applyCerts() error {
 	if err != nil {
 		return fmt.Errorf("failed to get CA certificate, err: %v", err)
 	}
-
 	// validate the CA certificate by hashcode
 	realToken, err := token.VerifyCAAndGetRealToken(cm.token, cacert)
 	if err != nil {
@@ -289,10 +288,11 @@ func (cm *CertManager) GetEdgeCert(url string, capem []byte, tlscert tls.Certifi
 		return nil, nil, fmt.Errorf("failed to create a csr of edge cert, err %v", err)
 	}
 
-	client, err := http.NewHTTPClientWithCA(capem, tlscert)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create a http client, err: %v", err)
-	}
+	//client, err := http.NewHTTPClientWithCA(capem, tlscert)
+	//if err != nil {
+	//	return nil, nil, fmt.Errorf("failed to create a http client, err: %v", err)
+	//}
+	client := http.NewHTTPClient()
 
 	req, err := http.BuildRequest(nethttp.MethodGet, url, bytes.NewReader(csrPem.Bytes), token, cm.NodeName)
 	if err != nil {
