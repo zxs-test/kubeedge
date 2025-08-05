@@ -19,10 +19,16 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+)
+
+const (
+	ClusterName string = "clustername"
+	ClusterType string = "clustertype"
 )
 
 // Create will creates a new token consisting of caHash and jwt token.
@@ -34,6 +40,8 @@ func Create(ca, caKey []byte, intervalTime time.Duration) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		ExpiresAt: jwt.NewNumericDate(expiresAt),
 	})
+	token.Header[ClusterName] = os.Getenv("EDGE_CLUSTER_NAME")
+	token.Header[ClusterType] = "EdgeCluster"
 
 	tokenString, err := token.SignedString(caKey)
 	if err != nil {
