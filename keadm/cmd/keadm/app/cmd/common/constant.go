@@ -91,6 +91,21 @@ const (
 	// FlagNameEdgeNodeName is KubeEdge node unique identification string
 	FlagNameEdgeNodeName = "edgenode-name"
 
+	// FlagNameHasDefaultTaint is used to determining whether to add taint on edge node
+	FlagNameHasDefaultTaint = "with-edge-taint"
+
+	// FlagNameEdgeNodeIP is KubeEdge Node IP address string
+	FlagNameEdgeNodeIP = "edgenode-ip"
+
+	// FlagNameConfigPath is KubeEdge EdgeCore config file path for override
+	FlagNameConfigPath = "edgecoreconfigpath"
+
+	// FlagNameQuicPort sets the port where to apply for the edge quic
+	FlagNameQuicPort = "quicport"
+
+	// FlagNameTunnelPort sets the port where to apply for the edge stream
+	FlagNameTunnelPort = "tunnelport"
+
 	// FlagNameRemoteRuntimeEndpoint is KubeEdge remote-runtime-endpoint string
 	FlagNameRemoteRuntimeEndpoint = "remote-runtime-endpoint"
 
