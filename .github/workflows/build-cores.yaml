@@ -47,8 +47,8 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./build/edge/Dockerfile
+          file: ./build/cloud/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ vars.IMAGE_REPO }}/edgecore:${{ env.branch }}-${{ env.suffix }}
+            ${{ vars.IMAGE_REPO }}/cloudcore:${{ env.branch }}-${{ env.suffix }}
