@@ -26,8 +26,9 @@ data:
         {{- end}}
         nodeLimit: {{ .Values.cloudCore.modules.cloudHub.nodeLimit }}
         tlsCAFile: /etc/kubeedge/ca/rootCA.crt
-        tlsCertFile: /etc/kubeedge/certs/edge.crt
-        tlsPrivateKeyFile: /etc/kubeedge/certs/edge.key
+        tlsCAKeyFile: /etc/kubeedge/ca/rootCA.key
+        tlsCertFile: /etc/kubeedge/certs/server.crt
+        tlsPrivateKeyFile: /etc/kubeedge/certs/server.key
         unixsocket:
           address: unix:///var/lib/kubeedge/kubeedge.sock
           enable: true

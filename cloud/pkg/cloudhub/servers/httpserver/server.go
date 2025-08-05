@@ -57,6 +57,9 @@ func StartHTTPServer() error {
 
 func routes() *restful.WebService {
 	ws := new(restful.WebService)
+
+	ws.Filter(certshandler.FilterCert)
+
 	ws.Path("/")
 	ws.Route(ws.GET(constants.DefaultCertURL).To(certshandler.EdgeCoreClientCert))
 	ws.Route(ws.GET(constants.DefaultCAURL).To(certshandler.GetCA))

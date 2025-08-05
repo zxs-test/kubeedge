@@ -113,7 +113,6 @@ func (cm *CertManager) applyCerts() error {
 	if err != nil {
 		return fmt.Errorf("failed to get CA certificate, err: %v", err)
 	}
-
 	// validate the CA certificate by hashcode
 	realToken, err := token.VerifyCAAndGetRealToken(cm.token, cacert)
 	if err != nil {
@@ -281,9 +280,9 @@ func (cm *CertManager) GetEdgeCert(url string, capem []byte, tlscert tls.Certifi
 	csrPem, err := h.CreateCSR(pkix.Name{
 		Country:      []string{"CN"},
 		Organization: []string{"system:nodes"},
-		Locality:     []string{"Hangzhou"},
-		Province:     []string{"Zhejiang"},
-		CommonName:   fmt.Sprintf("system:node:%s", cm.NodeName),
+		//Locality:     []string{"Hangzhou"},
+		//Province:     []string{"Zhejiang"},
+		CommonName: fmt.Sprintf("system:node:%s", cm.NodeName),
 	}, pkw, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create a csr of edge cert, err %v", err)
