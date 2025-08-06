@@ -165,11 +165,10 @@ func signEdgeCert(r io.ReadCloser, usagesStr string) (*pem.Block, error) {
 
 func FilterCert(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 	// 1. 检查是否已有TLS证书（直接连接时）
-	if req.Request.TLS != nil && len(req.Request.TLS.PeerCertificates) > 0 {
-		chain.ProcessFilter(req, resp)
-		return
-	}
-
+	//if req.Request.TLS != nil && len(req.Request.TLS.PeerCertificates) > 0 {
+	//	chain.ProcessFilter(req, resp)
+	//	return
+	//}
 	// 2. 尝试从Caddy透传的头部获取证书
 	certHeader := req.Request.Header.Get("X-Forwarded-Client-Cert")
 	if certHeader == "" {
@@ -178,11 +177,14 @@ func FilterCert(req *restful.Request, resp *restful.Response, chain *restful.Fil
 		return
 	}
 
+	klog.Info("into cert filter with cert")
+
 	// 3. 解析证书
 	cert, err := parseCertHeader(certHeader)
 	if err != nil {
 		klog.Errorf("Failed to parse client certificate: %v", err)
-		resp.WriteErrorString(http.StatusBadRequest, "Invalid client certificate")
+		// 解析证书失败，忽略当前header内证书
+		chain.ProcessFilter(req, resp)
 		return
 	}
 
