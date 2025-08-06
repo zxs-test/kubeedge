@@ -182,7 +182,7 @@ func FilterCert(req *restful.Request, resp *restful.Response, chain *restful.Fil
 	// 3. 解析证书
 	cert, err := parseCertHeader(certHeader)
 	if err != nil {
-		klog.Errorf("Failed to parse client certificate: %v", err)
+		klog.Errorf("Failed to parse client certificate: %s error: %v", certHeader, err)
 		// 解析证书失败，忽略当前header内证书
 		chain.ProcessFilter(req, resp)
 		return
