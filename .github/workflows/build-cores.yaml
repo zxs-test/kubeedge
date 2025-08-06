@@ -48,7 +48,7 @@ jobs:
         with:
           context: .
           file: ./build/cloud/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ vars.IMAGE_REPO }}/cloudcore:${{ env.branch }}-${{ env.suffix }}
