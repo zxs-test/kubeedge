@@ -30,14 +30,15 @@ import (
 
 	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
-	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeedge/api/apis/common/constants"
 	"github.com/kubeedge/api/apis/componentconfig/edgecore/v1alpha2"
 	"github.com/kubeedge/api/apis/componentconfig/edgecore/v1alpha2/validation"
+	"github.com/kubeedge/kubeedge/cloud/pkg/common/messagelayer"
 	"github.com/kubeedge/kubeedge/keadm/cmd/keadm/app/cmd/common"
 	"github.com/kubeedge/kubeedge/keadm/cmd/keadm/app/cmd/util"
 	"github.com/kubeedge/kubeedge/keadm/cmd/keadm/app/cmd/util/extsystem"
@@ -215,6 +216,20 @@ func createEdgeConfigFiles(opt *common.JoinOptions) error {
 			}
 		}
 	}
+	if edgeCoreConfig.Modules.Edged.NodeLabels == nil {
+		edgeCoreConfig.Modules.Edged.NodeLabels = make(map[string]string)
+	}
+	if edgeCoreConfig.Modules.Edged.NodeIP == "" {
+		hostnameOverride := pkgutil.GetHostname()
+		edgeCoreConfig.Modules.Edged.NodeIP, err = pkgutil.GetLocalIP(hostnameOverride)
+		if err != nil {
+			klog.Errorf("get local ip failed: %v", err)
+			return fmt.Errorf("get local ip failed: %v", err)
+		}
+	}
+
+	edgeCoreConfig.Modules.Edged.NodeLabels[messagelayer.LabelInternalIP] = edgeCoreConfig.Modules.Edged.NodeIP
+	klog.V(3).Infof("edgeCoreConfig.Modules.Edged.NodeLabels: %v", edgeCoreConfig.Modules.Edged.NodeLabels)
 
 	if errs := validation.ValidateEdgeCoreConfiguration(edgeCoreConfig); len(errs) > 0 {
 		return errors.New(pkgutil.SpliceErrors(errs.ToAggregate().Errors()))

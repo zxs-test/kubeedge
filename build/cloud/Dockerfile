@@ -12,8 +12,8 @@ FROM alpine:3.19
 
 COPY --from=builder /usr/local/bin/cloudcore /usr/local/bin/cloudcore
 
-RUN apk add --update-cache \
-    iptables \
-    && rm -rf /var/cache/apk/*
+#RUN apk add --update-cache \
+#    iptables \
+#    && rm -rf /var/cache/apk/*
 
 ENTRYPOINT ["cloudcore"]

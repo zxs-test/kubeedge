@@ -104,12 +104,12 @@ kubernetes controller which manages devices so that the device metadata/status d
 			// Negotiate TunnelPort for multi cloudcore instances
 			waitTime := rand.Int31n(10)
 			time.Sleep(time.Duration(waitTime) * time.Second)
-			tunnelport, err := NegotiateTunnelPort()
-			if err != nil {
-				panic(err)
-			}
+			//tunnelport, err := NegotiateTunnelPort()
+			//if err != nil {
+			//	panic(err)
+			//}
 
-			config.CommonConfig.TunnelPort = *tunnelport
+			//config.CommonConfig.TunnelPort = *tunnelport
 
 			if changed := v1alpha1.AdjustCloudCoreConfig(config); changed {
 				updateCloudCoreConfigMap(config)
@@ -125,12 +125,12 @@ kubernetes controller which manages devices so that the device metadata/status d
 
 			registerModules(config)
 
-			if config.Modules.IptablesManager == nil || config.Modules.IptablesManager.Enable && config.Modules.IptablesManager.Mode == v1alpha1.InternalMode {
-				// By default, IptablesManager manages tunnel port related iptables rules
-				// The internal mode will share the host network, forward to the stream port.
-				streamPort := int(config.Modules.CloudStream.StreamPort)
-				go iptables.NewIptablesManager(config.KubeAPIConfig, streamPort).Run(ctx)
-			}
+			//if config.Modules.IptablesManager == nil || config.Modules.IptablesManager.Enable && config.Modules.IptablesManager.Mode == v1alpha1.InternalMode {
+			//	// By default, IptablesManager manages tunnel port related iptables rules
+			//	// The internal mode will share the host network, forward to the stream port.
+			//	streamPort := int(config.Modules.CloudStream.StreamPort)
+			//	go iptables.NewIptablesManager(config.KubeAPIConfig, streamPort).Run(ctx)
+			//}
 
 			// Start all modules
 			core.StartModules()

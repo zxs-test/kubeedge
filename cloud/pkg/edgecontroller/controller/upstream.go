@@ -26,6 +26,7 @@ we grab some functions from `kubelet/status/status_manager.go and do some modifi
 package controller
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	stderrors "errors"
@@ -42,7 +43,6 @@ import (
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	apimachineryType "k8s.io/apimachinery/pkg/types"
-	patchtypes "k8s.io/apimachinery/pkg/types"
 	k8sinformer "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	coordinationlisters "k8s.io/client-go/listers/coordination/v1"
@@ -62,7 +62,6 @@ import (
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/constants"
 	"github.com/kubeedge/kubeedge/cloud/pkg/edgecontroller/types"
 	routerrule "github.com/kubeedge/kubeedge/cloud/pkg/router/rule"
-	comconstants "github.com/kubeedge/kubeedge/common/constants"
 	common "github.com/kubeedge/kubeedge/common/constants"
 	edgeapi "github.com/kubeedge/kubeedge/common/types"
 	"github.com/kubeedge/kubeedge/pkg/metaserver/util"
@@ -566,7 +565,7 @@ func (uc *UpstreamController) createNode(nodeID, name string, node *v1.Node) (*v
 	if err == nil && len(kubernetesReversedLabels) > 0 {
 		patchBytes, err := json.Marshal(map[string]interface{}{"metadata": map[string]interface{}{"labels": kubernetesReversedLabels}})
 		if err == nil {
-			node, err = uc.kubeClient.CoreV1().Nodes().Patch(context.TODO(), name, patchtypes.MergePatchType, patchBytes, metaV1.PatchOptions{})
+			node, err = uc.kubeClient.CoreV1().Nodes().Patch(context.TODO(), name, apimachineryType.MergePatchType, patchBytes, metaV1.PatchOptions{})
 		}
 	}
 	return node, err
@@ -696,6 +695,7 @@ func (uc *UpstreamController) updateNodeStatus() {
 				}
 
 				getNode.Status = nodeStatusRequest.Status
+				getNode = messagelayer.HijackInternalIP(getNode)
 
 				node, err := uc.kubeClient.CoreV1().Nodes().UpdateStatus(utilcontext.FromMessage(context.Background(), msg), getNode, metaV1.UpdateOptions{})
 				if err != nil {
@@ -750,7 +750,12 @@ func kubeClientGet(uc *UpstreamController, namespace string, name string, queryT
 	case common.ResourceTypeVolumeAttachment:
 		obj, err = uc.kubeClient.StorageV1().VolumeAttachments().Get(utilcontext.FromMessage(context.Background(), msg), name, metaV1.GetOptions{})
 	case model.ResourceTypeNode:
-		obj, err = uc.nodeLister.Get(name)
+		//obj, err = uc.nodeLister.Get(name)
+		var node *v1.Node
+		node, err = uc.nodeLister.Get(name)
+		if err == nil {
+			obj = messagelayer.RegainInternalIP(node)
+		}
 	case model.ResourceTypeServiceAccountToken:
 		obj, err = uc.getServiceAccountToken(namespace, name, msg)
 	case model.ResourceTypeLease:
@@ -971,6 +976,7 @@ func (uc *UpstreamController) registerNode() {
 			if err != nil {
 				klog.Errorf("create node %s error: %v , register node failed", name, err)
 			}
+			resp = messagelayer.RegainInternalIP(resp)
 
 			resMsg := model.NewMessage(msg.GetID()).
 				FillBody(&edgeapi.ObjectResp{Object: resp, Err: err}).
@@ -1011,11 +1017,29 @@ func (uc *UpstreamController) patchNode() {
 				continue
 			}
 
+			// replace the internal ip with the pod ip
+			podIP, err := kubeedgeutil.GetLocalIP(kubeedgeutil.GetHostname())
+			if err != nil {
+				klog.Errorf("Failed to get Local IP address: %v", err)
+				continue
+			}
+
+			oldNode, err := uc.nodeLister.Get(name)
+			if err != nil {
+				klog.Errorf("message: %s process failure, get node failed with error: %v, namespace: %s, name: %s", msg.GetID(), err, namespace, name)
+				continue
+			}
+			originIP := messagelayer.GetInternalIPByLabel(oldNode)
+
+			if originIP != "" {
+				patchBytes = bytes.ReplaceAll(patchBytes, []byte(originIP), []byte(podIP))
+			}
+
 			node, err := uc.kubeClient.CoreV1().Nodes().Patch(utilcontext.FromMessage(context.TODO(), msg), name, apimachineryType.StrategicMergePatchType, patchBytes, metaV1.PatchOptions{}, "status")
 			if err != nil {
 				klog.Errorf("message: %s process failure, patch node failed with error: %v, namespace: %s, name: %s", msg.GetID(), err, namespace, name)
 			}
-
+			messagelayer.SetInternalIP(node, originIP)
 			resMsg := model.NewMessage(msg.GetID()).
 				SetResourceVersion(node.ResourceVersion).
 				FillBody(&edgeapi.ObjectResp{Object: node, Err: err}).
@@ -1590,7 +1614,7 @@ func UpdateAnnotation(ctx context.Context, nodeName string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get cloudcore localIP with err:%v", err)
 	}
-	if value, ok := node.Annotations[comconstants.EdgeMappingCloudKey]; ok {
+	if value, ok := node.Annotations[common.EdgeMappingCloudKey]; ok {
 		if value == localIP {
 			return nil
 		}
@@ -1598,7 +1622,7 @@ func UpdateAnnotation(ctx context.Context, nodeName string) error {
 	if node.Annotations == nil {
 		node.Annotations = make(map[string]string)
 	}
-	node.Annotations[comconstants.EdgeMappingCloudKey] = localIP
+	node.Annotations[common.EdgeMappingCloudKey] = localIP
 	_, err = client.GetKubeClient().CoreV1().Nodes().Update(ctx, node, metaV1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update node:%s with err:%v", nodeName, err)

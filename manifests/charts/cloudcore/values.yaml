@@ -5,7 +5,7 @@ appVersion: "1.21.0"
 
 cloudCore:
   replicaCount: 1
-  hostNetWork: true
+  hostNetWork: false
   image:
     repository: "kubeedge/cloudcore"
     tag: "v1.21.0"
@@ -35,7 +35,7 @@ cloudCore:
       memory: 512Mi
   strategy: {}
   featureGates:
-    requireAuthorization: false
+    requireAuthorization: true
   modules:
     cloudHub:
       # Caution!: Leave this entry to empty will cause CloudCore to exit abnormally once KubeEdge is enabled.
@@ -57,7 +57,7 @@ cloudCore:
     cloudStream:
       enable: true
     dynamicController:
-      enable: false
+      enable: true
     router:
       enable: false
     taskManager:
@@ -73,7 +73,7 @@ cloudCore:
     annotations: {}
 
 iptablesManager:
-  enable: true
+  enable: false
   mode: "external"
   framework: "legacy"
   hostNetWork: true
@@ -174,7 +174,7 @@ admission:
       memory: 64Mi
 
 mosquitto:
-  enable: true
+  enable: false
   image:
     repository: eclipse-mosquitto
     tag: "1.6.15"

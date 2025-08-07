@@ -38,6 +38,7 @@ import (
 	hubconfig "github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/config"
 	streamconfig "github.com/kubeedge/kubeedge/cloud/pkg/cloudstream/config"
 	"github.com/kubeedge/kubeedge/cloud/pkg/common/client"
+	"github.com/kubeedge/kubeedge/cloud/pkg/common/messagelayer"
 	"github.com/kubeedge/kubeedge/pkg/stream"
 )
 
@@ -225,6 +226,7 @@ func (s *TunnelServer) updateNodeKubeletEndpoint(nodeName string) error {
 			return false, nil
 		}
 
+		getNode = messagelayer.HijackInternalIP(getNode)
 		getNode.Status.DaemonEndpoints.KubeletEndpoint.Port = int32(s.tunnelPort)
 		_, err = s.kubeClient.Nodes().UpdateStatus(context.Background(), getNode, metav1.UpdateOptions{})
 		if err != nil {

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 
 	"github.com/kubeedge/beehive/pkg/core/model"
@@ -43,6 +44,9 @@ const (
 	ResourceTypeTwinEdgeUpdated  = "twin/edge_updated"
 	ResourceTypeMembershipDetail = "membership/detail"
 	ResourceDeviceStateUpdated   = "state/update"
+
+	LabelInternalIP    = "kubeedge.io/internal-ip"
+	DefaultKubeletPort = 10003
 )
 
 // BuildResource return a string as "beehive/pkg/core/model".Message.Router.Resource
@@ -148,4 +152,57 @@ func GetResourceTypeForDevice(resource string) (string, error) {
 		return ResourceDeviceStateUpdated, nil
 	}
 	return "", fmt.Errorf("unknown resource, found: %s", resource)
+}
+
+func HijackInternalIP(node *v1.Node) *v1.Node {
+	podIP, err := pkgutil.GetLocalIP(pkgutil.GetHostname())
+	if err != nil {
+		klog.Errorf("Failed to get Local IP address: %v", err)
+		return node
+	}
+	klog.Infoln("pod ip", podIP)
+
+	for i, address := range node.Status.Addresses {
+		if address.Type == v1.NodeInternalIP {
+			node.Status.Addresses[i].Address = podIP
+			break
+		}
+	}
+	if node.Status.DaemonEndpoints.KubeletEndpoint.Port == 0 {
+		node.Status.DaemonEndpoints.KubeletEndpoint.Port = DefaultKubeletPort
+	}
+
+	return node
+}
+
+func RegainInternalIP(node *v1.Node) *v1.Node {
+	if node == nil {
+		return nil
+	}
+	if node.GetLabels() != nil {
+		if val, ok := node.Labels[LabelInternalIP]; ok {
+			SetInternalIP(node, val)
+		}
+	}
+	return node
+}
+
+func SetInternalIP(node *v1.Node, target string) {
+	for i, address := range node.Status.Addresses {
+		if address.Type == v1.NodeInternalIP {
+			node.Status.Addresses[i].Address = target
+			break
+		}
+	}
+}
+
+func GetInternalIPByLabel(node *v1.Node) string {
+	internalIP := ""
+	if node == nil {
+		return internalIP
+	}
+	if val, ok := node.Annotations[LabelInternalIP]; ok {
+		internalIP = val
+	}
+	return internalIP
 }
