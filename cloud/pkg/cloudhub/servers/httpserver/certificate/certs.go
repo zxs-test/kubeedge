@@ -183,7 +183,8 @@ func FilterCert(req *restful.Request, resp *restful.Response, chain *restful.Fil
 	cert, err := parseCertHeader(certHeader)
 	if err != nil {
 		klog.Errorf("Failed to parse client certificate: %s error: %v", certHeader, err)
-		// 解析证书失败，忽略当前header内证书
+		// 解析证书失败，说明当前请求原并没有带上tls证书，因此清空tls，避免服务端使用gateway的证书
+		req.Request.TLS = &tls.ConnectionState{}
 		chain.ProcessFilter(req, resp)
 		return
 	}
