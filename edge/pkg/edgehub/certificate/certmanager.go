@@ -10,6 +10,7 @@ import (
 	"io"
 	nethttp "net/http"
 	"os"
+	"strings"
 	"time"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -108,11 +109,10 @@ func (cm *CertManager) getCurrent() (*tls.Certificate, error) {
 
 // applyCerts realizes the certificate application by token
 func (cm *CertManager) applyCerts() error {
-	cacert, err := GetCACert(cm.caURL)
+	cacert, err := GetCACertWithToken(cm.caURL, strings.Join(strings.Split(cm.token, ".")[1:], "."))
 	if err != nil {
 		return fmt.Errorf("failed to get CA certificate, err: %v", err)
 	}
-
 	// validate the CA certificate by hashcode
 	realToken, err := token.VerifyCAAndGetRealToken(cm.token, cacert)
 	if err != nil {
@@ -249,6 +249,26 @@ func GetCACert(url string) ([]byte, error) {
 	return caCert, nil
 }
 
+// GetCACertWithToken gets the cloudcore CA certificate
+func GetCACertWithToken(url, token string) ([]byte, error) {
+	client := http.NewHTTPClient()
+	req, err := http.BuildRequest(nethttp.MethodGet, url, nil, token, "")
+	if err != nil {
+		return nil, err
+	}
+	res, err := http.SendRequest(req, client)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	caCert, err := io.ReadAll(io.LimitReader(res.Body, constants.MaxRespBodyLength))
+	if err != nil {
+		return nil, err
+	}
+
+	return caCert, nil
+}
+
 // GetEdgeCert applies for the certificate from cloudcore
 func (cm *CertManager) GetEdgeCert(url string, capem []byte, tlscert tls.Certificate, token string,
 ) ([]byte, []byte, error) {
@@ -260,9 +280,9 @@ func (cm *CertManager) GetEdgeCert(url string, capem []byte, tlscert tls.Certifi
 	csrPem, err := h.CreateCSR(pkix.Name{
 		Country:      []string{"CN"},
 		Organization: []string{"system:nodes"},
-		Locality:     []string{"Hangzhou"},
-		Province:     []string{"Zhejiang"},
-		CommonName:   fmt.Sprintf("system:node:%s", cm.NodeName),
+		//Locality:     []string{"Hangzhou"},
+		//Province:     []string{"Zhejiang"},
+		CommonName: fmt.Sprintf("system:node:%s", cm.NodeName),
 	}, pkw, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create a csr of edge cert, err %v", err)

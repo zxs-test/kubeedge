@@ -16,7 +16,9 @@ limitations under the License.
 package certificate
 
 import (
+	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -159,4 +161,86 @@ func signEdgeCert(r io.ReadCloser, usagesStr string) (*pem.Block, error) {
 		return nil, fmt.Errorf("fail to signCerts, err: %v", err)
 	}
 	return certBlock, nil
+}
+
+func FilterCert(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+	// 1. 检查是否已有TLS证书（直接连接时）
+	//if req.Request.TLS != nil && len(req.Request.TLS.PeerCertificates) > 0 {
+	//	chain.ProcessFilter(req, resp)
+	//	return
+	//}
+	// 2. 尝试从Caddy透传的头部获取证书
+	certHeader := req.Request.Header.Get("X-Forwarded-Client-Cert")
+	if certHeader == "" {
+		// 没有证书头，继续处理（业务层会处理无证书情况）
+		chain.ProcessFilter(req, resp)
+		return
+	}
+
+	klog.Info("into cert filter with cert")
+
+	// 3. 解析证书
+	cert, err := parseCertHeader(certHeader)
+	if err != nil {
+		klog.Errorf("Failed to parse client certificate: %s error: %v", certHeader, err)
+		// 解析证书失败，说明当前请求原并没有带上tls证书，因此清空tls，避免服务端使用gateway的证书
+		req.Request.TLS = &tls.ConnectionState{}
+		chain.ProcessFilter(req, resp)
+		return
+	}
+
+	// 4. 创建或更新TLS连接状态
+	if req.Request.TLS == nil {
+		req.Request.TLS = &tls.ConnectionState{}
+	}
+
+	// 添加证书到PeerCertificates
+	req.Request.TLS.PeerCertificates = []*x509.Certificate{cert}
+
+	// 5. 继续处理请求
+	chain.ProcessFilter(req, resp)
+}
+
+// 解析Caddy透传的证书头
+func parseCertHeader(header string) (*x509.Certificate, error) {
+	// Base64解码
+	decoded, err := base64.StdEncoding.DecodeString(header)
+	if err != nil {
+		return nil, err
+	}
+
+	// 尝试解析PEM格式
+	var block *pem.Block
+	var certData []byte
+
+	// 移除可能的多余字符
+	cleanData := strings.ReplaceAll(string(decoded), "\n", "")
+	cleanData = strings.ReplaceAll(cleanData, " ", "")
+	decoded = []byte(cleanData)
+
+	// PEM格式可能有多个证书块，我们只需要第一个客户端证书
+	for len(decoded) > 0 {
+		block, decoded = pem.Decode(decoded)
+		if block == nil {
+			break
+		}
+
+		if block.Type == "CERTIFICATE" {
+			certData = block.Bytes
+			break
+		}
+	}
+
+	// 如果没有找到PEM块，尝试直接解析DER
+	if certData == nil {
+		certData = decoded
+	}
+
+	// 解析X.509证书
+	cert, err := x509.ParseCertificate(certData)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
 }

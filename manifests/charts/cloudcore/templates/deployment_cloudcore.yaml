@@ -85,12 +85,20 @@ spec:
         secret:
           secretName: cloudcore
           items:
-          - key: stream.crt
-            path: certs/stream.crt
-          - key: stream.key
-            path: certs/stream.key
-          - key: streamCA.crt
+          - key: server.crt
+            path: certs/server.crt
+          - key: server.key
+            path: certs/server.key
+          - key: tlsCA.crt
+            path: ca/rootCA.crt
+          - key: tlsCA.key
+            path: ca/rootCA.key
+          - key: tlsCA.crt
             path: ca/streamCA.crt
+          - key: server.crt
+            path: certs/stream.crt
+          - key: server.key
+            path: certs/stream.key
       - name: sock
         hostPath:
           path: /var/lib/kubeedge

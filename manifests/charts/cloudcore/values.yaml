@@ -3,6 +3,7 @@
 # Declare variables to be passed into your templates.
 appVersion: "1.21.0"
 
+edgeClusterName: ""
 cloudCore:
   replicaCount: 1
   hostNetWork: false
@@ -146,7 +147,7 @@ controllerManager:
 admission:
   enable: false
   replicaCount: 1
-  certsSecretName: ""
+  certsSecretName: "admission"
   image:
     repository: "kubeedge/admission"
     tag: "v1.21.0"
