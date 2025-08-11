@@ -59,6 +59,9 @@ cloudCore:
       enable: true
     dynamicController:
       enable: true
+    policyController:
+      enable: true
+      periodicResyncInterval: 2m
     router:
       enable: false
     taskManager:
