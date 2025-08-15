@@ -78,7 +78,7 @@ cloudCore:
     annotations: {}
 
 iptablesManager:
-  enable: true
+  enable: false
   mode: "external"
   framework: "legacy"
   hostNetWork: true
